@@ -1,6 +1,6 @@
 [submodule "Scripts"]
 	path = Scripts
-	url = git@github.com:mrtuborg/customjs.git
+	url = git@github.com:mrtuborg/obsidian-customjs.git
 [submodule "Templates"]
 	path = Templates
-	url = git@github.com:mrtuborg/customjs.git
+	url = git@github.com:mrtuborg/obsidian-templates.git

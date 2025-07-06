@@ -21,8 +21,9 @@ from typing import Dict, List, Tuple, Optional, Union
 from datetime import datetime
 
 class ActivityTodosRestorer:
-    def __init__(self, vault_path: str = ".", dry_run: bool = True):
-        self.vault_path = Path(vault_path)
+    def __init__(self, vault_path: str = "..", dry_run: bool = True):
+        # Since script is in Engine folder, vault root is one level up
+        self.vault_path = Path(vault_path).resolve()
         self.activities_path = self.vault_path / "Activities"
         self.journal_path = self.vault_path / "Journal"
         self.dry_run = dry_run
@@ -39,10 +40,11 @@ class ActivityTodosRestorer:
             return ""
     
     def create_backup_dir(self) -> Path:
-        """Create backup directory with timestamp"""
+        """Create backup directory with timestamp in script directory"""
         if self.backup_dir is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            self.backup_dir = self.vault_path / f"restore_todos_backup_{timestamp}"
+            script_dir = Path(__file__).parent  # Engine directory
+            self.backup_dir = script_dir / f"restore_todos_backup_{timestamp}"
             
             if not self.dry_run:
                 self.backup_dir.mkdir(parents=True, exist_ok=True)
@@ -175,28 +177,42 @@ class ActivityTodosRestorer:
 
     def find_activity_section_in_daily_note(self, content: str, activity_name: str) -> Tuple[int, int]:
         """Find the start and end positions of an activity section in daily note"""
-        # Pattern to match activity header
-        pattern = rf'##### \[\[Activities/{re.escape(activity_name)}\.md\|{re.escape(activity_name)}\]\]\s*\n----'
+        # Pattern to match activity header (without expecting immediate ----)
+        pattern = rf'##### \[\[Activities/{re.escape(activity_name)}\.md\|{re.escape(activity_name)}\]\]'
         
         match = re.search(pattern, content)
         if not match:
             return -1, -1
         
-        start_pos = match.end()
+        # Start position is after the header line
+        header_end = match.end()
+        # Find the end of the line
+        newline_pos = content.find('\n', header_end)
+        if newline_pos == -1:
+            return -1, -1
         
-        # Find the end of this activity section (next activity or end of activities)
+        start_pos = newline_pos + 1
+        
+        # Find the end of this activity section (look for ---- that ends this activity)
         remaining_content = content[start_pos:]
-        next_activity_match = re.search(r'^##### \[\[Activities/', remaining_content, re.MULTILINE)
         
-        if next_activity_match:
-            end_pos = start_pos + next_activity_match.start()
+        # Look for ---- that marks the end of this activity
+        end_marker_match = re.search(r'^----\s*$', remaining_content, re.MULTILINE)
+        
+        if end_marker_match:
+            end_pos = start_pos + end_marker_match.start()
         else:
-            # Look for end of activities section
-            end_match = re.search(r'\n\n### ', remaining_content)
-            if end_match:
-                end_pos = start_pos + end_match.start()
+            # Fallback: look for next activity or end of activities section
+            next_activity_match = re.search(r'^##### \[\[Activities/', remaining_content, re.MULTILINE)
+            if next_activity_match:
+                end_pos = start_pos + next_activity_match.start()
             else:
-                end_pos = len(content)
+                # Look for end of activities section
+                end_match = re.search(r'\n\n### ', remaining_content)
+                if end_match:
+                    end_pos = start_pos + end_match.start()
+                else:
+                    end_pos = len(content)
         
         return start_pos, end_pos
 
@@ -244,14 +260,15 @@ class ActivityTodosRestorer:
             content = self.create_activities_section(content)
             activities_start, activities_end = self.find_activities_section(content)
         
-        # Create the activity subsection
+        # Create the activity subsection with proper formatting
         activity_section = [
             f'##### [[Activities/{activity_name}.md|{activity_name}]]'
         ] + todos + [
-            '----'
+            '----',
+            ''  # Empty line after ----
         ]
         
-        activity_text = '\n'.join(activity_section) + '\n'
+        activity_text = '\n'.join(activity_section)
         
         # Insert at the end of Activities section (before the next ### section)
         new_content = content[:activities_end] + activity_text + content[activities_end:]
@@ -595,11 +612,12 @@ class ActivityTodosRestorer:
     def save_summary_to_file(self, summary_content: str, used_activity_files: set, unused_activity_files: set,
                             problematic_activity_files: set, affected_daily_notes: set, activity_to_dates: dict,
                             date_to_activities: dict, processed_activities: int, total_restored: int):
-        """Save detailed summary to a file"""
+        """Save detailed summary to a file in script directory"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         mode_suffix = "dry_run" if self.dry_run else "executed"
         summary_filename = f"activity_todos_restoration_summary_{timestamp}_{mode_suffix}.md"
-        summary_path = self.vault_path / summary_filename
+        script_dir = Path(__file__).parent  # Engine directory
+        summary_path = script_dir / summary_filename
         
         # Create comprehensive summary content
         full_summary = []
