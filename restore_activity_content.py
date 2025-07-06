@@ -97,14 +97,14 @@ class ActivityTodosRestorer:
             print(f"Error writing {file_path}: {e}")
             return False
     
-    def extract_activity_todos(self, activity_file: Path) -> Dict[str, List[str]]:
-        """Extract todos from activity file organized by date"""
+    def extract_activity_content(self, activity_file: Path) -> Dict[str, List[str]]:
+        """Extract all content from activity file organized by date"""
         content = self.read_file(activity_file)
         if not content:
             return {}
         
-        # Find all date markers and their associated todos
-        date_todos = {}
+        # Find all date markers and their associated content
+        date_content = {}
         
         # Pattern to match date markers like [[2025-07-04]]
         date_pattern = r'\[\[(\d{4}-\d{2}-\d{2})\]\]'
@@ -118,25 +118,97 @@ class ActivityTodosRestorer:
                 date = parts[i]
                 section_content = parts[i + 1]
                 
-                # Extract todos from this section
-                todos = self.extract_todos_from_section(section_content)
-                if todos:
-                    date_todos[date] = todos
+                # Extract all relevant content from this section
+                content_items = self.extract_content_from_section(section_content)
+                if content_items:
+                    date_content[date] = content_items
         
-        return date_todos
+        return date_content
     
-    def extract_todos_from_section(self, section: str) -> List[str]:
-        """Extract todo items from a section of text"""
-        todos = []
+    def extract_content_from_section(self, section: str) -> List[str]:
+        """Extract all relevant content from a section of text after a date marker"""
+        content_items = []
         lines = section.split('\n')
         
-        for line in lines:
-            line = line.strip()
-            # Match todo items: - [ ] or - [x]
-            if re.match(r'^- \[[x ]\]', line):
-                todos.append(line)
+        # Track if we're in a meaningful content block
+        in_content_block = False
+        current_block = []
         
-        return todos
+        for line in lines:
+            stripped_line = line.strip()
+            
+            # Skip empty lines at the beginning
+            if not stripped_line and not in_content_block:
+                continue
+            
+            # Stop at next date marker or major section break
+            if re.match(r'\[\[(\d{4}-\d{2}-\d{2})\]\]', stripped_line):
+                break
+            
+            # Stop at major markdown headers (# ## ###) that might indicate new sections
+            if re.match(r'^#{1,3}\s+', stripped_line) and in_content_block:
+                break
+            
+            # Include various types of content:
+            # - Todo items: - [ ] or - [x]
+            # - List items: - something
+            # - Numbered lists: 1. something
+            # - Headers: #### or ##### (sub-headers are OK)
+            # - Regular text paragraphs
+            # - Code blocks, quotes, etc.
+            
+            if stripped_line:
+                # This is meaningful content
+                if not in_content_block:
+                    in_content_block = True
+                
+                # Preserve original indentation for formatting
+                content_items.append(line.rstrip())
+                
+            elif in_content_block:
+                # Empty line within content block - preserve it for formatting
+                content_items.append('')
+            
+            # Stop if we hit a horizontal rule that might separate sections
+            if stripped_line in ['---', '----', '-----']:
+                # Include the rule and stop
+                if not content_items or content_items[-1] != stripped_line:
+                    content_items.append(stripped_line)
+                break
+        
+        # Clean up trailing empty lines
+        while content_items and not content_items[-1].strip():
+            content_items.pop()
+        
+        return content_items
+    
+    def analyze_content_types(self, content_items: List[str]) -> List[str]:
+        """Analyze the types of content in the content items"""
+        types = set()
+        
+        for item in content_items:
+            stripped = item.strip()
+            if not stripped:
+                continue
+                
+            if re.match(r'^- \[[x ]\]', stripped):
+                types.add("todos")
+            elif re.match(r'^- ', stripped):
+                types.add("lists")
+            elif re.match(r'^\d+\. ', stripped):
+                types.add("numbered lists")
+            elif re.match(r'^#{4,6}\s+', stripped):
+                types.add("headers")
+            elif stripped.startswith('```'):
+                types.add("code blocks")
+            elif stripped.startswith('>'):
+                types.add("quotes")
+            elif stripped in ['---', '----', '-----']:
+                types.add("dividers")
+            else:
+                types.add("text")
+        
+        return sorted(list(types))
     
     def get_daily_note_path(self, date: str) -> Optional[Path]:
         """Get the path to a daily note based on date"""
@@ -305,7 +377,7 @@ class ActivityTodosRestorer:
         new_lines = lines[:insert_pos] + activities_section + lines[insert_pos:]
         return '\n'.join(new_lines)
 
-    def create_activity_subsection(self, content: str, activity_name: str, todos: List[str]) -> str:
+    def create_activity_subsection(self, content: str, activity_name: str, content_items: List[str]) -> str:
         """Create a new activity subsection within the Activities section"""
         activities_start, activities_end = self.find_activities_section(content)
         
@@ -317,7 +389,7 @@ class ActivityTodosRestorer:
         # Create the activity subsection with proper formatting
         activity_section = [
             f'##### [[Activities/{activity_name}.md|{activity_name}]]'
-        ] + todos + [
+        ] + content_items + [
             '----',
             ''  # Empty line after ----
         ]
@@ -329,8 +401,8 @@ class ActivityTodosRestorer:
         
         return new_content
     
-    def restore_todos_to_daily_note(self, daily_note_path: Path, activity_name: str, todos: List[str], confirm: bool = False) -> bool:
-        """Restore todos to a specific activity section in a daily note"""
+    def restore_content_to_daily_note(self, daily_note_path: Path, activity_name: str, content_items: List[str], confirm: bool = False) -> bool:
+        """Restore content to a specific activity section in a daily note"""
         if not daily_note_path.exists():
             print(f"  📅 Daily note does not exist: {daily_note_path.name}")
             
@@ -368,81 +440,92 @@ class ActivityTodosRestorer:
             
             # Create the activity section
             print(f"  🔧 Creating activity section '{activity_name}' in {daily_note_path.name}")
-            new_content = self.create_activity_subsection(content, activity_name, todos)
+            new_content = self.create_activity_subsection(content, activity_name, content_items)
             
             # Write back to file
             if self.write_file(daily_note_path, new_content):
                 if self.dry_run:
-                    print(f"  [DRY RUN] Would create activity section and restore {len(todos)} todos for '{activity_name}' in {daily_note_path.name}")
+                    print(f"  [DRY RUN] Would create activity section and restore {len(content_items)} lines for '{activity_name}' in {daily_note_path.name}")
                 else:
-                    print(f"  ✅ Created activity section and restored {len(todos)} todos for '{activity_name}' in {daily_note_path.name}")
+                    print(f"  ✅ Created activity section and restored {len(content_items)} lines for '{activity_name}' in {daily_note_path.name}")
                 return True
             else:
                 print(f"  ❌ Failed to create activity section for '{activity_name}' in {daily_note_path.name}")
                 return False
         
-        # Check if section already has todos
+        # Check if section already has content
         section_content = content[start_pos:end_pos]
-        if re.search(r'- \[[x ]\]', section_content):
-            print(f"  ⏭️  Activity '{activity_name}' in {daily_note_path.name} already has todos, skipping")
+        if section_content.strip():
+            print(f"  ⏭️  Activity '{activity_name}' in {daily_note_path.name} already has content, skipping")
             return False
         
         # Show what will be added
-        print(f"  📝 Will add {len(todos)} todos to existing '{activity_name}' section in {daily_note_path.name}:")
-        for todo in todos:
-            print(f"    {todo}")
+        content_types = self.analyze_content_types(content_items)
+        print(f"  📝 Will add {len(content_items)} lines to existing '{activity_name}' section in {daily_note_path.name}:")
+        print(f"      Content types: {', '.join(content_types)}")
+        
+        # Show preview of content (first few lines)
+        preview_lines = min(5, len(content_items))
+        for i in range(preview_lines):
+            line = content_items[i]
+            preview = line[:80] + "..." if len(line) > 80 else line
+            print(f"    {preview}")
+        
+        if len(content_items) > preview_lines:
+            print(f"    ... and {len(content_items) - preview_lines} more lines")
         
         if confirm and not self.dry_run:
-            response = input(f"  ❓ Add these todos to {daily_note_path.name}? (y/N): ").strip().lower()
+            response = input(f"  ❓ Add this content to {daily_note_path.name}? (y/N): ").strip().lower()
             if response != 'y':
                 print(f"  ⏭️  Skipped {daily_note_path.name}")
                 return False
         
-        # Insert todos after the activity header
-        todos_text = '\n'.join(todos) + '\n'
-        new_content = content[:start_pos] + '\n' + todos_text + content[end_pos:]
+        # Insert content after the activity header
+        content_text = '\n'.join(content_items) + '\n'
+        new_content = content[:start_pos] + '\n' + content_text + content[end_pos:]
         
         # Write back to file
         if self.write_file(daily_note_path, new_content):
             if self.dry_run:
-                print(f"  [DRY RUN] Would restore {len(todos)} todos for '{activity_name}' in {daily_note_path.name}")
+                print(f"  [DRY RUN] Would restore {len(content_items)} lines for '{activity_name}' in {daily_note_path.name}")
             else:
-                print(f"  ✅ Restored {len(todos)} todos for '{activity_name}' in {daily_note_path.name}")
+                print(f"  ✅ Restored {len(content_items)} lines for '{activity_name}' in {daily_note_path.name}")
             return True
         else:
-            print(f"  ❌ Failed to write todos for '{activity_name}' in {daily_note_path.name}")
+            print(f"  ❌ Failed to write content for '{activity_name}' in {daily_note_path.name}")
             return False
     
     def process_activity_file(self, activity_file: Path, confirm: bool = False) -> int:
-        """Process a single activity file and restore its todos"""
+        """Process a single activity file and restore its content"""
         activity_name = activity_file.stem
         print(f"\n📁 Processing activity: {activity_name}")
         
-        # Extract todos organized by date
-        date_todos = self.extract_activity_todos(activity_file)
+        # Extract content organized by date
+        date_content = self.extract_activity_content(activity_file)
         
-        if not date_todos:
-            print(f"  No dated todos found in {activity_name}")
+        if not date_content:
+            print(f"  No dated content found in {activity_name}")
             return 0
         
         restored_count = 0
         
         # Sort dates in ascending order
-        sorted_dates = sorted(date_todos.keys())
+        sorted_dates = sorted(date_content.keys())
         print(f"  📅 Found dates: {', '.join(sorted_dates)}")
         
         # Process each date in ascending order
         for date in sorted_dates:
-            todos = date_todos[date]
-            print(f"  📅 Date {date}: {len(todos)} todos")
+            content_items = date_content[date]
+            content_types = self.analyze_content_types(content_items)
+            print(f"  📅 Date {date}: {len(content_items)} lines ({', '.join(content_types)})")
             
             # Get daily note path
             daily_note_path = self.get_daily_note_path(date)
             if not daily_note_path:
                 continue
             
-            # Restore todos to daily note
-            if self.restore_todos_to_daily_note(daily_note_path, activity_name, todos, confirm):
+            # Restore content to daily note
+            if self.restore_content_to_daily_note(daily_note_path, activity_name, content_items, confirm):
                 restored_count += 1
         
         return restored_count
@@ -487,14 +570,14 @@ class ActivityTodosRestorer:
                 activity_name = activity_file.stem
                 relative_path = activity_file.relative_to(self.activities_path)
                 
-                # Try to extract todos
-                date_todos = self.extract_activity_todos(activity_file)
+                # Try to extract content
+                date_content = self.extract_activity_content(activity_file)
                 
-                if date_todos:
+                if date_content:
                     used_activity_files.add(str(relative_path))
-                    activity_to_dates[str(relative_path)] = sorted(date_todos.keys())
+                    activity_to_dates[str(relative_path)] = sorted(date_content.keys())
                     
-                    for date in date_todos.keys():
+                    for date in date_content.keys():
                         daily_note_path = self.get_daily_note_path(date)
                         if daily_note_path:
                             # Include both existing and potentially created daily notes
@@ -503,7 +586,7 @@ class ActivityTodosRestorer:
                                 date_to_activities[date] = []
                             date_to_activities[date].append(activity_name)
                 else:
-                    # Check if file has date markers but no todos (problematic format)
+                    # Check if file has date markers but no content (problematic format)
                     content = self.read_file(activity_file)
                     if re.search(r'\[\[(\d{4}-\d{2}-\d{2})\]\]', content):
                         problematic_activity_files.add(str(relative_path))
@@ -585,11 +668,11 @@ class ActivityTodosRestorer:
         if unused_activity_files:
             print(f"🚫 UNUSED ACTIVITY FILES ({len(unused_activity_files)} files):")
             print(f"-" * 40)
-            print("   These files have no date markers [[YYYY-MM-DD]] with todos:")
+            print("   These files have no date markers [[YYYY-MM-DD]] with content:")
             
             summary_lines.append(f"🚫 UNUSED ACTIVITY FILES ({len(unused_activity_files)} files):")
             summary_lines.append("-" * 40)
-            summary_lines.append("   These files have no date markers [[YYYY-MM-DD]] with todos:")
+            summary_lines.append("   These files have no date markers [[YYYY-MM-DD]] with content:")
             
             for activity_name in sorted(unused_activity_files):
                 print(f"   📁 {activity_name}")
@@ -601,11 +684,11 @@ class ActivityTodosRestorer:
         if problematic_activity_files:
             print(f"⚠️  PROBLEMATIC ACTIVITY FILES ({len(problematic_activity_files)} files):")
             print(f"-" * 40)
-            print("   These files have date markers but no todos or formatting issues:")
+            print("   These files have date markers but no content or formatting issues:")
             
             summary_lines.append(f"⚠️  PROBLEMATIC ACTIVITY FILES ({len(problematic_activity_files)} files):")
             summary_lines.append("-" * 40)
-            summary_lines.append("   These files have date markers but no todos or formatting issues:")
+            summary_lines.append("   These files have date markers but no content or formatting issues:")
             
             for activity_name in sorted(problematic_activity_files):
                 print(f"   📁 {activity_name}")
@@ -646,13 +729,13 @@ class ActivityTodosRestorer:
         
         total_files = len(used_activity_files) + len(unused_activity_files) + len(problematic_activity_files)
         print(f"   🗂️  Total activity files found: {total_files}")
-        print(f"   ✅ Activity files with dated todos: {len(used_activity_files)}")
+        print(f"   ✅ Activity files with dated content: {len(used_activity_files)}")
         print(f"   🚫 Activity files unused: {len(unused_activity_files)}")
         print(f"   ⚠️  Activity files with issues: {len(problematic_activity_files)}")
         print(f"   📝 Total daily notes to be modified: {len(affected_daily_notes)}")
         
         summary_lines.append(f"   🗂️  Total activity files found: {total_files}")
-        summary_lines.append(f"   ✅ Activity files with dated todos: {len(used_activity_files)}")
+        summary_lines.append(f"   ✅ Activity files with dated content: {len(used_activity_files)}")
         summary_lines.append(f"   🚫 Activity files unused: {len(unused_activity_files)}")
         summary_lines.append(f"   ⚠️  Activity files with issues: {len(problematic_activity_files)}")
         summary_lines.append(f"   📝 Total daily notes to be modified: {len(affected_daily_notes)}")
@@ -703,7 +786,7 @@ class ActivityTodosRestorer:
         full_summary.append(f"- **Activities Processed:** {processed_activities}")
         full_summary.append(f"- **Daily Notes Restored:** {total_restored}")
         full_summary.append(f"- **Total Activity Files Found:** {len(used_activity_files) + len(unused_activity_files) + len(problematic_activity_files)}")
-        full_summary.append(f"- **Files with Dated Todos:** {len(used_activity_files)}")
+        full_summary.append(f"- **Files with Dated Content:** {len(used_activity_files)}")
         full_summary.append(f"- **Unused Files:** {len(unused_activity_files)}")
         full_summary.append(f"- **Problematic Files:** {len(problematic_activity_files)}")
         full_summary.append(f"")
@@ -735,7 +818,7 @@ class ActivityTodosRestorer:
 
 def main():
     """Main entry point"""
-    parser = argparse.ArgumentParser(description="Restore activity todos to daily notes")
+    parser = argparse.ArgumentParser(description="Restore activity content to daily notes")
     parser.add_argument("--dry-run", action="store_true", default=True, 
                        help="Preview changes without making them (default)")
     parser.add_argument("--confirm", action="store_true", 
@@ -776,10 +859,10 @@ def main():
     
     if result.get("success"):
         if dry_run:
-            print(f"\n🔍 DRY RUN: Would restore todos to {result['daily_notes_restored']} daily notes!")
+            print(f"\n🔍 DRY RUN: Would restore content to {result['daily_notes_restored']} daily notes!")
             print("💡 Run with --confirm to make changes with prompts, or --auto to make changes automatically")
         else:
-            print(f"\n🎉 Successfully restored todos to {result['daily_notes_restored']} daily notes!")
+            print(f"\n🎉 Successfully restored content to {result['daily_notes_restored']} daily notes!")
     else:
         print(f"\n❌ Restoration failed: {result.get('error', 'Unknown error')}")
 

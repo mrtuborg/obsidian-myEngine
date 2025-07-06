@@ -41,6 +41,11 @@ This is a sophisticated Personal Knowledge Management (PKM) system built on top 
 - **CustomJS**: Shared JavaScript modules and utilities
 - **Moment.js**: Date manipulation and formatting
 
+### Recent Major Improvements
+- **🎉 Templater Plugin Eliminated**: The system now uses pure DataviewJS for all template processing, eliminating the need for the Templater plugin dependency
+- **Smart File Movement**: Non-date files are automatically moved to Activities folder with proper template replacement
+- **Cleaner Architecture**: Simplified template structure using composer pattern for better maintainability
+
 ## Architecture
 
 ```
@@ -547,7 +552,7 @@ class ComponentName {
 1. **Obsidian** with the following plugins installed:
    - DataviewJS
    - CustomJS
-   - Templater
+   - ~~Templater~~ (No longer required! 🎉)
 2. **Node.js** knowledge for JavaScript development
 3. **Basic understanding** of Obsidian's file structure and linking system
 
@@ -684,62 +689,75 @@ class fileIO {
 
 ## Testing
 
-### Unit Testing Approach
+### 🧪 Comprehensive Test Suite
+The system includes a complete test suite located in `Engine/TestSuite/` with comprehensive testing for all components.
+
+**📋 Test Categories:**
+- **Core Component Tests**: noteBlocksParser, fileIO, mentionsProcessor, attributesProcessor
+- **Feature Tests**: todoRollover, activitiesInProgress, activityComposer, dailyNoteComposer
+- **Integration Tests**: Full workflow testing, cross-component interactions
+- **Sample Data**: Ready-to-use test files and scenarios
+
+**🚀 Quick Testing:**
+1. Open any test file in `Engine/TestSuite/`
+2. Execute the DataviewJS block to run tests
+3. Check console output (F12 → Console) for results
+4. Look for ✅ success or ❌ error indicators
+
+**📊 Test Runner:**
+- Use `Engine/TestSuite/TestRunner.md` to run all tests at once
+- Comprehensive test results with performance metrics
+- Automated regression testing capabilities
+
+**📚 Full Documentation:** See [Engine/TestSuite/README.md](Engine/TestSuite/README.md) for complete testing guide.
+
+### Unit Testing Examples
 ```javascript
 // Example test structure for todoRollover
-describe('todoRollover', () => {
-  let todoRollover;
+async function testTodoRollover() {
+  console.log("=== TODO ROLLOVER TEST START ===");
   
-  beforeEach(() => {
-    todoRollover = new todoRollover();
-  });
+  const {todoRollover} = await cJS();
+  const testTodo = {
+    data: '- [ ] Call dentist',
+    page: 'Journal/2025/07.July/2025-07-05.md'
+  };
   
-  test('should identify activity-related todos', () => {
-    const todoBlock = {
-      data: '- [ ] Task [[Activities/Project]]',
-      page: 'Journal/2025/07.July/2025-07-05.md'
-    };
-    
-    expect(todoRollover.isActivityRelatedTodo(todoBlock, [])).toBe(true);
-  });
+  const isActivityRelated = todoRollover.isActivityRelatedTodo(testTodo, []);
+  console.log("✅ Standalone todo detection:", !isActivityRelated);
   
-  test('should identify standalone todos', () => {
-    const todoBlock = {
-      data: '- [ ] Call dentist',
-      page: 'Journal/2025/07.July/2025-07-05.md'
-    };
-    
-    expect(todoRollover.isActivityRelatedTodo(todoBlock, [])).toBe(false);
-  });
-});
+  console.log("=== TODO ROLLOVER TEST END ===");
+}
 ```
 
 ### Integration Testing
 ```javascript
 // Test complete daily note processing
 async function testDailyNoteProcessing() {
-  const mockApp = createMockObsidianApp();
-  const mockDv = createMockDataview();
-  const mockFile = { path: 'Journal/2025/07.July/2025-07-06.md', name: '2025-07-06' };
+  console.log("=== DAILY NOTE PROCESSING TEST START ===");
   
-  const composer = new dailyNoteComposer();
-  const result = await composer.processDailyNote(mockApp, mockDv, mockFile, '2025-07-06');
+  const {dailyNoteComposer} = await cJS();
+  const currentFile = dv.current().file;
   
-  expect(result.success).toBe(true);
-  expect(result.content).toContain('### 06 [[2025-07|July]] [[2025]]');
+  try {
+    await dailyNoteComposer.processDailyNote(app, dv, currentFile, currentFile.name);
+    console.log("✅ Daily note processing completed successfully");
+  } catch (error) {
+    console.log("❌ Daily note processing failed:", error);
+  }
+  
+  console.log("=== DAILY NOTE PROCESSING TEST END ===");
 }
 ```
 
-### Test Data Setup
-```markdown
-// Create test files in a separate test vault:
-TestVault/
-├── Journal/2025/07.July/
-│   ├── 2025-07-05.md (with test todos)
-│   └── 2025-07-06.md (target for rollover)
-├── Activities/
-│   └── TestActivity.md (with test content)
-└── Engine/Scripts/ (copy of all scripts)
+### Test Data Structure
+```
+Engine/TestSuite/
+├── Core/                    # Core component tests
+├── Features/                # Feature-specific tests  
+├── Integration/             # End-to-end workflow tests
+├── Samples/                 # Sample data for testing
+└── Utils/                   # Testing utilities
 ```
 
 ## Performance Optimization

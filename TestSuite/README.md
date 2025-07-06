@@ -2,6 +2,8 @@
 
 This test suite provides comprehensive testing for all custom scripts in the Personal Knowledge Management (PKM) system. Each feature has dedicated test files that can be run independently to verify functionality.
 
+**📚 Main Documentation:** For complete system documentation, architecture details, and API reference, see [Engine/README.md](../README.md)
+
 ## 🎯 Purpose
 
 - **Feature Testing**: Test individual script components in isolation

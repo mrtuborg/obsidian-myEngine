@@ -1,15 +1,15 @@
-# Activity Todos Restoration Utility
+# Activity Content Restoration Utility
 
-This Python utility reads all Activity files in your vault and restores todos to the corresponding daily notes based on the date markers found in each activity file.
+This Python utility reads all Activity files in your vault and restores **all content** (not just todos) to the corresponding daily notes based on the date markers found in each activity file.
 
 ## How It Works
 
 The utility:
 1. **Scans all Activity files** in the `Activities/` directory
-2. **Extracts todos** organized by date markers like `[[2025-07-04]]`
+2. **Extracts all content** (todos, notes, lists, headers, etc.) organized by date markers like `[[2025-07-04]]`
 3. **Finds corresponding daily notes** in `Journal/YYYY/MM.Month/`
-4. **Restores missing todos** to the correct activity sections
-5. **Preserves existing todos** (won't overwrite if todos already exist)
+4. **Restores missing content** to the correct activity sections
+5. **Preserves existing content** (won't overwrite if activity section already has content)
 
 ## Usage
 
