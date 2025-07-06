@@ -1,0 +1,6 @@
+[submodule "Scripts"]
+	path = Scripts
+	url = git@github.com:mrtuborg/customjs.git
+[submodule "Templates"]
+	path = Templates
+	url = git@github.com:mrtuborg/customjs.git
