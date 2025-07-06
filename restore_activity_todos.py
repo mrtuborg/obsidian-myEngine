@@ -154,6 +154,60 @@ class ActivityTodosRestorer:
         except ValueError as e:
             print(f"Invalid date format {date}: {e}")
             return None
+
+    def create_daily_note(self, date: str, confirm: bool = False) -> bool:
+        """Create a new daily note with proper structure"""
+        daily_note_path = self.get_daily_note_path(date)
+        if not daily_note_path:
+            return False
+        
+        if daily_note_path.exists():
+            return True  # Already exists
+        
+        try:
+            # Parse date for formatting
+            date_obj = datetime.strptime(date, '%Y-%m-%d')
+            day = date_obj.strftime('%d')
+            month_name = date_obj.strftime('%B')
+            year = date_obj.year
+            
+            # Calculate week number
+            week_num = date_obj.isocalendar()[1]
+            
+            # Create daily note content
+            daily_note_content = f"""---
+---
+### {day} [[{year}-{date_obj.strftime('%m')}|{month_name}]] [[{year}]]
+#### Week: [[{year}-W{week_num:02d}|{week_num}]]
+
+----
+
+### Activities:
+----
+
+"""
+            
+            # Ask for confirmation if needed
+            if confirm and not self.dry_run:
+                response = input(f"  ❓ Create missing daily note {daily_note_path.name}? (y/N): ").strip().lower()
+                if response != 'y':
+                    print(f"  ⏭️  Skipped creating daily note {daily_note_path.name}")
+                    return False
+            
+            # Write the daily note
+            if self.write_file(daily_note_path, daily_note_content):
+                if self.dry_run:
+                    print(f"  [DRY RUN] Would create daily note: {daily_note_path.name}")
+                else:
+                    print(f"  ✅ Created daily note: {daily_note_path.name}")
+                return True
+            else:
+                print(f"  ❌ Failed to create daily note: {daily_note_path.name}")
+                return False
+                
+        except Exception as e:
+            print(f"  ❌ Error creating daily note for {date}: {e}")
+            return False
     
     def find_activities_section(self, content: str) -> Tuple[int, int]:
         """Find the Activities section in daily note"""
@@ -278,8 +332,22 @@ class ActivityTodosRestorer:
     def restore_todos_to_daily_note(self, daily_note_path: Path, activity_name: str, todos: List[str], confirm: bool = False) -> bool:
         """Restore todos to a specific activity section in a daily note"""
         if not daily_note_path.exists():
-            print(f"Daily note does not exist: {daily_note_path}")
-            return False
+            print(f"  📅 Daily note does not exist: {daily_note_path.name}")
+            
+            # Extract date from filename for daily note creation
+            date_str = daily_note_path.stem  # e.g., "2025-07-04"
+            
+            # Ask permission to create the daily note
+            if confirm and not self.dry_run:
+                response = input(f"  ❓ Create missing daily note {daily_note_path.name}? (y/N): ").strip().lower()
+                if response != 'y':
+                    print(f"  ⏭️  Skipped creating daily note {daily_note_path.name}")
+                    return False
+            
+            # Create the daily note
+            if not self.create_daily_note(date_str, confirm):
+                print(f"  ❌ Failed to create daily note {daily_note_path.name}")
+                return False
         
         content = self.read_file(daily_note_path)
         if not content:
@@ -428,7 +496,8 @@ class ActivityTodosRestorer:
                     
                     for date in date_todos.keys():
                         daily_note_path = self.get_daily_note_path(date)
-                        if daily_note_path and daily_note_path.exists():
+                        if daily_note_path:
+                            # Include both existing and potentially created daily notes
                             affected_daily_notes.add(date)
                             if date not in date_to_activities:
                                 date_to_activities[date] = []
