@@ -4,3 +4,6 @@
 [submodule "Templates"]
 	path = Templates
 	url = git@github.com:mrtuborg/obsidian-templates.git
+[submodule "mind-vault"]
+	path = mind-vault
+	url = git@github.com:mrtuborg/mind-vault.git
