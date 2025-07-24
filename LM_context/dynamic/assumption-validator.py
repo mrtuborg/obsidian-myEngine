@@ -56,33 +56,157 @@ class AssumptionValidator:
             return False
             
     def validate_project_specific(self):
-        """
-        CUSTOMIZE THIS METHOD for your specific project validations.
-        
-        Examples:
-        - Test API connectivity
-        - Verify database connections
-        - Check hardware availability
-        - Validate configuration files
-        - Test build processes
-        """
-        print("🔍 Validating project-specific requirements...")
+        """Validate Obsidian Engine-specific requirements."""
+        print("🔍 Validating Obsidian Engine requirements...")
         
         try:
-            # Example validation - customize for your project
-            self.record_result("project_setup", True, "Project setup validation placeholder")
+            success = True
             
-            # Add your specific validations here:
-            # - Hardware checks
-            # - Network connectivity
-            # - Service availability
-            # - Configuration validation
-            # - Build system checks
+            # Check Scripts directory and JavaScript components
+            success &= self.validate_scripts_directory()
             
-            return True
+            # Check Templates directory
+            success &= self.validate_templates_directory()
+            
+            # Check TestSuite directory
+            success &= self.validate_test_suite()
+            
+            # Validate project structure
+            success &= self.validate_obsidian_structure()
+            
+            return success
             
         except Exception as e:
             self.record_result("project_validation", False, f"Error: {str(e)}")
+            return False
+            
+    def validate_scripts_directory(self):
+        """Validate Scripts directory and JavaScript components."""
+        try:
+            project_root = Path(__file__).parent.parent.parent
+            scripts_dir = project_root / "Scripts"
+            
+            if not scripts_dir.exists():
+                self.record_result("scripts_directory", False, "Scripts directory not found")
+                return False
+                
+            self.record_result("scripts_directory", True, "Scripts directory exists")
+            
+            # Check for core JavaScript files
+            required_scripts = [
+                "dailyNoteComposer.js",
+                "activityComposer.js",
+                "components/noteBlocksParser.js",
+                "components/todoRollover.js",
+                "components/mentionsProcessor.js",
+                "components/activitiesInProgress.js",
+                "utilities/fileIO.js"
+            ]
+            
+            for script in required_scripts:
+                script_path = scripts_dir / script
+                if script_path.exists():
+                    self.record_result(f"script_{script.replace('/', '_').replace('.js', '')}", True, f"Found {script}")
+                else:
+                    self.record_result(f"script_{script.replace('/', '_').replace('.js', '')}", False, f"Missing {script}")
+                    
+            return True
+            
+        except Exception as e:
+            self.record_result("scripts_validation", False, f"Scripts validation error: {str(e)}")
+            return False
+            
+    def validate_templates_directory(self):
+        """Validate Templates directory."""
+        try:
+            project_root = Path(__file__).parent.parent.parent
+            templates_dir = project_root / "Templates"
+            
+            if not templates_dir.exists():
+                self.record_result("templates_directory", False, "Templates directory not found")
+                return False
+                
+            self.record_result("templates_directory", True, "Templates directory exists")
+            
+            # Check for required templates
+            required_templates = [
+                "DailyNote-template.md",
+                "Activity-template.md"
+            ]
+            
+            for template in required_templates:
+                template_path = templates_dir / template
+                if template_path.exists():
+                    self.record_result(f"template_{template.replace('-', '_').replace('.md', '')}", True, f"Found {template}")
+                else:
+                    self.record_result(f"template_{template.replace('-', '_').replace('.md', '')}", False, f"Missing {template}")
+                    
+            return True
+            
+        except Exception as e:
+            self.record_result("templates_validation", False, f"Templates validation error: {str(e)}")
+            return False
+            
+    def validate_test_suite(self):
+        """Validate TestSuite directory."""
+        try:
+            project_root = Path(__file__).parent.parent.parent
+            test_dir = project_root / "TestSuite"
+            
+            if not test_dir.exists():
+                self.record_result("test_suite_directory", False, "TestSuite directory not found")
+                return False
+                
+            self.record_result("test_suite_directory", True, "TestSuite directory exists")
+            
+            # Check for test categories
+            test_categories = ["Core", "Features", "Integration", "Samples"]
+            
+            for category in test_categories:
+                category_path = test_dir / category
+                if category_path.exists():
+                    self.record_result(f"test_category_{category.lower()}", True, f"Found {category} tests")
+                else:
+                    self.record_result(f"test_category_{category.lower()}", False, f"Missing {category} tests")
+                    
+            return True
+            
+        except Exception as e:
+            self.record_result("test_suite_validation", False, f"TestSuite validation error: {str(e)}")
+            return False
+            
+    def validate_obsidian_structure(self):
+        """Validate expected Obsidian vault structure."""
+        try:
+            project_root = Path(__file__).parent.parent.parent
+            
+            # Check for knowledge directory
+            knowledge_dir = project_root / "knowledge"
+            if knowledge_dir.exists():
+                self.record_result("knowledge_directory", True, "Knowledge directory exists")
+            else:
+                self.record_result("knowledge_directory", False, "Knowledge directory not found")
+                
+            # Check for minds-vault submodule
+            minds_vault_dir = project_root / "minds-vault"
+            if minds_vault_dir.exists():
+                self.record_result("minds_vault_submodule", True, "minds-vault submodule exists")
+            else:
+                self.record_result("minds_vault_submodule", False, "minds-vault submodule not found")
+                
+            # Check for README files
+            readme_files = ["README.md", "README_journal_backup.md", "README_PDF_CONVERTER.md"]
+            for readme in readme_files:
+                readme_path = project_root / readme
+                if readme_path.exists():
+                    self.record_result(f"readme_{readme.replace('.md', '').replace('_', '_').lower()}", True, f"Found {readme}")
+                else:
+                    self.record_result(f"readme_{readme.replace('.md', '').replace('_', '_').lower()}", False, f"Missing {readme}")
+                    
+            return True
+            
+        except Exception as e:
+            self.record_result("obsidian_structure_validation", False, f"Structure validation error: {str(e)}")
             return False
             
     def record_result(self, test_name, passed, details):
