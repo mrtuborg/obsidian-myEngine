@@ -38,7 +38,7 @@ The system automates the management of daily notes, activities, and knowledge tr
 ```mermaid
 flowchart TD
     A[Start of Day] --> B[Daily Note Automatically Created]
-    B --> C[User Adds Journal Entries and Mentions [[Activity]]]
+    B --> C["User Adds Journal Entries and Mentions [[Activity]]"]
     C --> D[Embedded Scripts Parse Note Content]
     D --> E[Process Mentions and Update Activities]
     E --> F[Update Frontmatter Metadata]
