@@ -16,7 +16,7 @@ const config: QuartzConfig = {
       provider: "plausible",
     },
     locale: "en-US",
-    baseUrl: "mrtuborg.github.io",
+    baseUrl: "mrtuborg.github.io/Digital-Garden",
     ignorePatterns: ["private", "templates", ".obsidian", "_assets"],
     defaultDateType: "created",
     theme: {
