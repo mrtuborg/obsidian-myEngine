@@ -24,7 +24,7 @@ The following sections will go into detail for what methods can be implemented f
 
 - `BuildCtx` is defined in `quartz/ctx.ts`. It consists of
   - `argv`: The command line arguments passed to the Quartz [[build]] command
-  - `cfg`: The full Quartz [[configuration]]
+  - `cfg`: The full Quartz [[Engine/minds-vault/source/docs/configuration]]
   - `allSlugs`: a list of all the valid content slugs (see [[paths]] for more information on what a `ServerSlug` is)
 - `StaticResources` is defined in `quartz/resources.tsx`. It consists of
   - `css`: a list of URLs for stylesheets that should be loaded

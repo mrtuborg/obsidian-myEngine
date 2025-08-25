@@ -20,7 +20,7 @@ npx quartz create
 This will guide you through initializing your Quartz with content. Once you've done so, see how to:
 
 1. [[authoring content|Writing content]] in Quartz
-2. [[configuration|Configure]] Quartz's behaviour
+2. [[Engine/minds-vault/source/docs/configuration|Configure]] Quartz's behaviour
 3. Change Quartz's [[layout]]
 4. [[build|Build and preview]] Quartz
 5. Sync your changes with [[setting up your GitHub repository|GitHub]]
@@ -37,7 +37,7 @@ If you prefer instructions in a video format you can try following Nicole van de
 - [[SPA Routing|Ridiculously fast page loads]] and tiny bundle sizes
 - Fully-customizable parsing, filtering, and page generation through [[making plugins|plugins]]
 
-For a comprehensive list of features, visit the [features page](/features). You can read more about the _why_ behind these features on the [[philosophy]] page and a technical overview on the [[architecture]] page.
+For a comprehensive list of features, visit the [features page](/features). You can read more about the _why_ behind these features on the [[philosophy]] page and a technical overview on the [[Engine/minds-vault/source/docs/advanced/architecture]] page.
 
 ### 🚧 Troubleshooting + Updating
 
