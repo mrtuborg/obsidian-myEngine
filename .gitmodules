@@ -7,3 +7,6 @@
 [submodule "mind-vault"]
 	path = mind-vault
 	url = git@github.com:mrtuborg/mind-vault.git
+[submodule "minds-vault"]
+	path = minds-vault
+	url = https://github.com/mrtuborg/mrtuborg.github.io.git
