@@ -75,15 +75,31 @@ Content after first rule
 Content after second rule (hierarchy broken again)`;
 
 try {
-  const parser = new noteBlocksParser();
-  const collection = parser.parse("test-edge-cases.md", edgeCaseContent);
+  // Load CustomJS factories
+  const cjsResult = await cJS();
+  const noteBlocksParser = cjsResult.createnoteBlocksParserInstance;
   
-  console.log("📊 Edge Case Results:");
-  console.log("Total blocks:", collection.blocks.length);
-  console.log("Block types:", collection.getStats().types);
-  console.log("Root blocks:", collection.getRootBlocks().length);
+  if (!noteBlocksParser) {
+    throw new Error("noteBlocksParser factory not found in CustomJS");
+  }
   
-  console.log("\n🔍 Specific Edge Case Tests:");
+  const parser = noteBlocksParser();
+  const collection = await parser.parse("test-edge-cases.md", edgeCaseContent);
+  
+  dv.header(2, "🧪 Edge Cases & Boundary Conditions Test");
+  dv.paragraph("**Testing:** Empty lines, mixed indentation, deep nesting, and boundary conditions");
+  
+  // Basic Results
+  dv.header(3, "📊 Parsing Results");
+  const stats = collection.getStats();
+  const rootBlocks = collection.getRootBlocks();
+  
+  dv.paragraph(`✅ **Total blocks parsed:** ${collection.blocks.length}`);
+  dv.paragraph(`✅ **Block types:** ${Object.keys(stats.types).join(", ")}`);
+  dv.paragraph(`✅ **Root blocks:** ${rootBlocks.length}`);
+  
+  // Specific Edge Case Tests
+  dv.header(3, "🔍 Edge Case Analysis");
   
   // Test 1: Immediate content after header
   const immediateChildren = collection.blocks.filter(b => 
@@ -91,63 +107,36 @@ try {
     b.content.includes("immediate content") &&
     b.children.length > 0
   );
-  console.log("✓ Headers with immediate children:", immediateChildren.length);
+  dv.paragraph(`✅ **Headers with immediate children:** ${immediateChildren.length}`);
   
   // Test 2: Content after empty lines should not be children
   const headersWithEmptyLines = collection.blocks.filter(b => 
     b.getAttribute("type") === "header" && 
     b.content.includes("empty lines")
   );
-  if (headersWithEmptyLines.length > 0) {
-    console.log("✓ Header with empty lines children count:", headersWithEmptyLines[0].children.length);
-  }
+  const emptyLineChildCount = headersWithEmptyLines.length > 0 ? headersWithEmptyLines[0].children.length : 0;
+  dv.paragraph(`✅ **Empty line handling:** Header after empty lines has ${emptyLineChildCount} children`);
   
   // Test 3: Deep nesting levels
   const deeplyNested = collection.blocks.filter(b => 
     (b.getAttribute("indentLevel") || 0) >= 8
   );
-  console.log("✓ Deeply nested blocks (8+ spaces):", deeplyNested.length);
+  dv.paragraph(`✅ **Deep nesting:** ${deeplyNested.length} blocks at 8+ indent levels`);
   
   // Test 4: Mixed content types
   const textBlocks = collection.findByType("text");
-  console.log("✓ Text blocks found:", textBlocks.length);
+  dv.paragraph(`✅ **Text blocks found:** ${textBlocks.length}`);
   
-  // Test 5: Hierarchy breaks
-  const rootBlocks = collection.getRootBlocks();
-  console.log("✓ Root blocks (hierarchy breaks):", rootBlocks.length);
-  
-  console.log("\n🌳 Detailed Hierarchy (first 10 levels):");
-  const hierarchy = collection.getHierarchy();
-  
-  function printLimitedHierarchy(nodes, indent = "", maxDepth = 3, currentDepth = 0) {
-    if (currentDepth >= maxDepth) return;
-    
-    nodes.slice(0, 5).forEach((node, i) => { // Limit to first 5 nodes per level
-      const block = node.block;
-      const type = block.getAttribute("type");
-      const level = block.getAttribute("level") || "";
-      const indentLevel = block.getAttribute("indentLevel") || 0;
-      const preview = block.content.substring(0, 40).replace(/\n/g, " ");
-      
-      console.log(`${indent}├─ ${type}${level ? `:${level}` : ""} (i:${indentLevel}) "${preview}"`);
-      
-      if (node.children.length > 0 && currentDepth < maxDepth - 1) {
-        printLimitedHierarchy(node.children, indent + "│  ", maxDepth, currentDepth + 1);
-      }
-    });
-  }
-  
-  printLimitedHierarchy(hierarchy);
-  
-  console.log("\n🧪 Boundary Condition Tests:");
+  // Boundary Condition Tests
+  dv.header(3, "🧪 Boundary Condition Results");
   
   // Test empty content
   const emptyBlocks = collection.blocks.filter(b => !b.content || b.content.trim() === "");
-  console.log("Empty blocks:", emptyBlocks.length);
+  dv.paragraph(`✅ **Empty blocks handled:** ${emptyBlocks.length}`);
   
   // Test maximum indentation
   const maxIndent = Math.max(...collection.blocks.map(b => b.getAttribute("indentLevel") || 0));
-  console.log("Maximum indentation level:", maxIndent);
+  dv.paragraph(`✅ **Maximum indentation level:** ${maxIndent}`);
   
   // Test parent-child consistency
   let consistencyErrors = 0;
@@ -158,9 +147,87 @@ try {
       }
     });
   });
-  console.log("Parent-child consistency errors:", consistencyErrors);
+  dv.paragraph(`✅ **Parent-child consistency errors:** ${consistencyErrors}`);
   
-  console.log("\n✅ Edge cases test completed!");
+  // Hierarchy Sample
+  dv.header(3, "🌳 Hierarchy Structure Sample");
+  const hierarchy = collection.getHierarchy();
+  
+  let hierarchyText = "";
+  function buildLimitedHierarchy(nodes, indent = "", maxDepth = 3, currentDepth = 0) {
+    if (currentDepth >= maxDepth) return;
+    
+    nodes.slice(0, 3).forEach((node, i) => {
+      const block = node.block;
+      const type = block.getAttribute("type");
+      const level = block.getAttribute("level") || "";
+      const indentLevel = block.getAttribute("indentLevel") || 0;
+      const preview = block.content.substring(0, 35).replace(/\n/g, " ");
+      
+      hierarchyText += `${indent}├─ **${type}${level ? `:${level}` : ""}** (i:${indentLevel}) "${preview}"\n`;
+      
+      if (node.children.length > 0 && currentDepth < maxDepth - 1) {
+        buildLimitedHierarchy(node.children, indent + "│  ", maxDepth, currentDepth + 1);
+      }
+    });
+  }
+  
+  buildLimitedHierarchy(hierarchy);
+  dv.paragraph("```\n" + hierarchyText + "```");
+  
+  // Test Validation
+  dv.header(3, "✅ Test Validation");
+  let allTestsPassed = true;
+  let testResults = [];
+  
+  // Test 1: Should handle immediate content correctly
+  if (immediateChildren.length > 0) {
+    testResults.push("✅ **Immediate content:** Headers with immediate children handled correctly");
+  } else {
+    testResults.push("❌ **Immediate content:** No headers with immediate children found");
+    allTestsPassed = false;
+  }
+  
+  // Test 2: Should respect empty line breaks
+  if (emptyLineChildCount === 0) {
+    testResults.push("✅ **Empty line breaks:** Content after empty lines correctly not children");
+  } else {
+    testResults.push("❌ **Empty line breaks:** Content after empty lines incorrectly became children");
+    allTestsPassed = false;
+  }
+  
+  // Test 3: Should handle deep nesting
+  if (deeplyNested.length > 0) {
+    testResults.push("✅ **Deep nesting:** 8+ level indentation handled successfully");
+  } else {
+    testResults.push("❌ **Deep nesting:** Deep indentation not working");
+    allTestsPassed = false;
+  }
+  
+  // Test 4: Should maintain consistency
+  if (consistencyErrors === 0) {
+    testResults.push("✅ **Consistency:** All parent-child relationships are consistent");
+  } else {
+    testResults.push(`❌ **Consistency:** ${consistencyErrors} parent-child relationship errors`);
+    allTestsPassed = false;
+  }
+  
+  // Test 5: Should handle multiple root blocks (separators)
+  if (rootBlocks.length >= 3) {
+    testResults.push("✅ **Hierarchy breaks:** Multiple root blocks from separators");
+  } else {
+    testResults.push("❌ **Hierarchy breaks:** Insufficient hierarchy breaking");
+    allTestsPassed = false;
+  }
+  
+  testResults.forEach(result => dv.paragraph(result));
+  
+  if (allTestsPassed) {
+    dv.paragraph("🎉 **ALL EDGE CASE TESTS PASSED!** The system handles boundary conditions robustly.");
+    dv.paragraph("Empty lines, deep nesting, mixed indentation, and hierarchy breaks all work correctly.");
+  } else {
+    dv.paragraph("⚠️ **SOME EDGE CASE TESTS FAILED.** Check the results above for details.");
+  }
   
 } catch (error) {
   console.error("❌ Edge cases test failed:", error);

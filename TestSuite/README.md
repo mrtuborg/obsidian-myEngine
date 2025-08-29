@@ -32,6 +32,16 @@ TestSuite/
 │   ├── test-fullWorkflow.md           # Complete workflow tests
 │   ├── test-activityToDaily.md        # Activity to daily note flow
 │   └── test-dataConsistency.md        # Data consistency tests
+├── BlockSystem/                        # Block system tests
+│   ├── README.md                       # Block system test documentation
+│   ├── test-basic-hierarchy.md        # Basic hierarchy tests
+│   ├── test-edge-cases.md             # Edge case tests
+│   ├── test-mixed-types.md            # Mixed block type tests
+│   ├── test-real-world-scenario.md    # Real-world scenario tests
+│   └── test-compatibility.md          # Compatibility tests
+├── Specifications/                     # TDD specifications
+│   ├── README.md                       # Specifications documentation
+│   └── noteBlocksParser-TDD-Specification.md  # Complete TDD spec for noteBlocksParser
 ├── Samples/                            # Sample data for testing
 │   ├── sample-activity.md             # Sample activity file
 │   ├── sample-daily-note.md           # Sample daily note
@@ -75,6 +85,20 @@ TestSuite/
 - **fullWorkflow**: Tests complete end-to-end workflows
 - **activityToDaily**: Tests activity → daily note integration
 - **dataConsistency**: Tests data integrity across operations
+
+### Block System Tests
+- **basic-hierarchy**: Tests fundamental block hierarchy relationships
+- **edge-cases**: Tests boundary conditions and error scenarios
+- **mixed-types**: Tests complex documents with multiple block types
+- **real-world-scenario**: Tests realistic usage patterns
+- **compatibility**: Tests backward compatibility and integration
+
+### TDD Specifications
+- **noteBlocksParser**: Comprehensive specification with 100+ test cases covering all functionality
+- Complete behavioral contracts for core components
+- Performance benchmarks and requirements
+- Edge case documentation and validation
+- Integration testing with Obsidian file system
 
 ## 🧪 Test Types
 

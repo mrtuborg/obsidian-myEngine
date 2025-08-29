@@ -1,4 +1,4 @@
-# Block System Test Page
+.# Block System Test Page
 
 This page tests the new object-oriented Block system directly in DataviewJS.
 

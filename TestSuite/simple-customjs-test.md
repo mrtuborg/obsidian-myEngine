@@ -7,39 +7,42 @@ This page tests if CustomJS plugin is working correctly.
 try {
   console.log("🧪 Testing CustomJS basic functionality...");
   
-  // Try to load a simple script
-  const { simpleTest } = await cJS();
-  console.log("✅ CustomJS loaded simpleTest successfully");
+  // First, let's see what cJS() returns
+  const cjsResult = await cJS();
+  console.log("cJS() returned:", cjsResult);
+  console.log("cJS() keys:", Object.keys(cjsResult));
   
-  // Try different calling patterns
-  console.log("simpleTest type:", typeof simpleTest);
-  console.log("simpleTest:", simpleTest);
-  
-  // Try calling directly on the class
-  let result;
-  try {
-    result = await simpleTest.run();
-    console.log("✅ Direct class call worked:", result);
-  } catch (e1) {
-    console.log("❌ Direct class call failed:", e1.message);
+  // Check if simpleTest is in the result
+  if ('simpleTest' in cjsResult) {
+    console.log("✅ simpleTest found in cJS() result");
+    const { simpleTest } = cjsResult;
+    console.log("simpleTest type:", typeof simpleTest);
+    console.log("simpleTest:", simpleTest);
     
-    // Try creating instance
-    try {
-      const tester = new simpleTest();
-      result = await tester.run();
-      console.log("✅ Instance call worked:", result);
-    } catch (e2) {
-      console.log("❌ Instance call failed:", e2.message);
-      throw new Error("Both calling patterns failed");
+    if (simpleTest) {
+      // Call method directly on the provided instance (CustomJS pattern)
+      try {
+        const result = simpleTest.run();
+        console.log("✅ Direct method call worked:", result);
+        
+        if (result && result.success) {
+          dv.paragraph(`✅ **CustomJS is working correctly!**`);
+          dv.paragraph(`Message: ${result.message}`);
+        } else {
+          dv.paragraph(`❌ **Simple test failed - unexpected result**`);
+        }
+      } catch (e) {
+        console.log("❌ Direct method call failed:", e.message);
+        dv.paragraph(`❌ **Method call failed:** ${e.message}`);
+      }
+    } else {
+      console.log("❌ simpleTest is null/undefined");
+      dv.paragraph(`❌ **simpleTest is null/undefined**`);
     }
-  }
-  console.log("✅ simpleTest.run() executed:", result);
-  
-  if (result.success) {
-    dv.paragraph(`✅ **CustomJS is working correctly!**`);
-    dv.paragraph(`Message: ${result.message}`);
   } else {
-    dv.paragraph(`❌ **Simple test failed**`);
+    console.log("❌ simpleTest not found in cJS() result");
+    dv.paragraph(`❌ **simpleTest not found in CustomJS**`);
+    dv.paragraph(`Available modules: ${Object.keys(cjsResult).join(', ')}`);
   }
   
 } catch (error) {

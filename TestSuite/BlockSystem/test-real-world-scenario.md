@@ -36,8 +36,14 @@ Started: 09:00
   - [x] Set up JWT tokens
   - [ ] Add password validation
     - [ ] Minimum 8 characters
+      - [ ] Check length validation
+      - [ ] Test edge cases
     - [ ] Special character requirement
+      - [ ] Require at least one symbol
+      - [ ] Test various symbols
     - [ ] Uppercase/lowercase mix
+      - [ ] Require both cases
+      - [ ] Validate mixed case
   - [ ] Test login flow
 - [ ] Code review for [[Activities/Feature X]]
   > Review notes:
@@ -136,50 +142,73 @@ Mood: Productive
 Energy: 8/10`;
 
 try {
-  const parser = new noteBlocksParser();
-  const collection = parser.parse("2025-08-28.md", realWorldContent);
+  dv.header(2, "🧪 Real-World Daily Notes Test");
+  dv.paragraph("**Testing:** Complex daily note with realistic content, deep nesting, and multiple content types");
   
-  console.log("📊 Real-World Scenario Results:");
-  console.log("Total blocks:", collection.blocks.length);
-  console.log("Block types:", collection.getStats().types);
-  console.log("Root blocks:", collection.getRootBlocks().length);
-  console.log("Blocks with parents:", collection.blocks.filter(b => b.parent).length);
+  // Load CustomJS factories
+  const cjsResult = await cJS();
+  const noteBlocksParser = cjsResult.createnoteBlocksParserInstance;
   
-  console.log("\n🎯 Daily Notes Analysis:");
+  if (!noteBlocksParser) {
+    throw new Error("noteBlocksParser factory not found in CustomJS");
+  }
   
-  // Analyze task structure
+  const parser = noteBlocksParser();
+  const collection = await parser.parse("2025-08-28.md", realWorldContent);
+  
+  // Basic Results
+  dv.header(3, "📊 Parsing Results");
+  const stats = collection.getStats();
+  const rootBlocks = collection.getRootBlocks().length;
+  const blocksWithParents = collection.blocks.filter(b => b.parent).length;
+  
+  dv.paragraph(`✅ **Total blocks parsed:** ${collection.blocks.length}`);
+  dv.paragraph(`✅ **Root blocks:** ${rootBlocks}`);
+  dv.paragraph(`✅ **Child blocks:** ${blocksWithParents}`);
+  dv.paragraph(`✅ **Block types:** ${Object.keys(stats.types).join(", ")}`);
+  
+  // Task Analysis
+  dv.header(3, "🎯 Task Analysis");
   const todos = collection.findByType("todo");
   const done = collection.findByType("done");
-  console.log("Total todos:", todos.length);
-  console.log("Completed tasks:", done.length);
-  console.log("Completion rate:", Math.round((done.length / (todos.length + done.length)) * 100) + "%");
+  const totalTasks = todos.length + done.length;
+  const completionRate = totalTasks > 0 ? Math.round((done.length / totalTasks) * 100) : 0;
   
-  // Analyze hierarchy depth
+  dv.paragraph(`✅ **Todo items:** ${todos.length}`);
+  dv.paragraph(`✅ **Completed tasks:** ${done.length}`);
+  dv.paragraph(`✅ **Completion rate:** ${completionRate}%`);
+  
+  // Hierarchy Analysis
+  dv.header(3, "🏗️ Hierarchy Analysis");
   const indentLevels = collection.blocks.map(b => b.getAttribute("indentLevel") || 0);
   const maxDepth = Math.max(...indentLevels);
   const avgDepth = indentLevels.reduce((a, b) => a + b, 0) / indentLevels.length;
-  console.log("Maximum nesting depth:", maxDepth);
-  console.log("Average nesting depth:", Math.round(avgDepth * 100) / 100);
   
-  // Analyze content types
+  dv.paragraph(`✅ **Maximum nesting depth:** ${maxDepth} levels`);
+  dv.paragraph(`✅ **Average nesting depth:** ${Math.round(avgDepth * 100) / 100} levels`);
+  
+  // Content Type Analysis
+  dv.header(3, "📝 Content Type Analysis");
   const headers = collection.findByType("header");
   const mentions = collection.findByType("mention");
   const callouts = collection.findByType("callout");
   const codeBlocks = collection.findByType("code");
   
-  console.log("Headers:", headers.length);
-  console.log("Mentions:", mentions.length);
-  console.log("Callouts:", callouts.length);
-  console.log("Code blocks:", codeBlocks.length);
+  dv.paragraph(`✅ **Headers:** ${headers.length}`);
+  dv.paragraph(`✅ **Mentions:** ${mentions.length}`);
+  dv.paragraph(`✅ **Callouts:** ${callouts.length}`);
+  dv.paragraph(`✅ **Code blocks:** ${codeBlocks.length}`);
   
-  console.log("\n🔗 Activity References Analysis:");
+  // Activity References
+  dv.header(3, "🔗 Activity References");
   const activityMentions = mentions.filter(block => {
     const target = block.getAttribute("target");
     return target && target.startsWith("Activities/");
   });
-  console.log("Activity mentions:", activityMentions.length);
   
-  // Group by activity
+  dv.paragraph(`✅ **Activity mentions found:** ${activityMentions.length}`);
+  
+  // Group by activity and show top 5
   const activityGroups = {};
   activityMentions.forEach(block => {
     const target = block.getAttribute("target");
@@ -189,44 +218,19 @@ try {
     activityGroups[target]++;
   });
   
-  console.log("Most referenced activities:");
-  Object.entries(activityGroups)
+  const topActivities = Object.entries(activityGroups)
     .sort(([,a], [,b]) => b - a)
-    .slice(0, 5)
-    .forEach(([activity, count]) => {
-      console.log(`  ${activity}: ${count} references`);
-    });
+    .slice(0, 5);
   
-  console.log("\n🌳 Hierarchy Structure Sample:");
-  const hierarchy = collection.getHierarchy();
-  
-  function printRealWorldHierarchy(nodes, indent = "", maxNodes = 3, maxDepth = 3, currentDepth = 0) {
-    if (currentDepth >= maxDepth) return;
-    
-    nodes.slice(0, maxNodes).forEach((node, i) => {
-      const block = node.block;
-      const type = block.getAttribute("type");
-      const level = block.getAttribute("level") || "";
-      const indentLevel = block.getAttribute("indentLevel") || 0;
-      const preview = block.content.substring(0, 60).replace(/\n/g, " ");
-      
-      console.log(`${indent}├─ ${type}${level ? `:${level}` : ""} (i:${indentLevel}) "${preview}"`);
-      
-      if (node.children.length > 0 && currentDepth < maxDepth - 1) {
-        const childCount = node.children.length;
-        if (childCount > maxNodes) {
-          console.log(`${indent}│  ├─ ... (${childCount - maxNodes} more children)`);
-        }
-        printRealWorldHierarchy(node.children, indent + "│  ", maxNodes, maxDepth, currentDepth + 1);
-      }
+  if (topActivities.length > 0) {
+    dv.paragraph("**Most referenced activities:**");
+    topActivities.forEach(([activity, count]) => {
+      dv.paragraph(`• **${activity}:** ${count} references`);
     });
   }
   
-  printRealWorldHierarchy(hierarchy);
-  
-  console.log("\n📈 Productivity Metrics:");
-  
-  // Calculate task distribution by section
+  // Productivity Metrics
+  dv.header(3, "📈 Productivity Metrics");
   const sectionTasks = {};
   headers.forEach(header => {
     const sectionName = header.content.replace(/^#+\s*/, "");
@@ -238,19 +242,72 @@ try {
     }
   });
   
-  console.log("Tasks by section:");
-  Object.entries(sectionTasks).forEach(([section, count]) => {
-    console.log(`  ${section}: ${count} tasks`);
-  });
+  if (Object.keys(sectionTasks).length > 0) {
+    dv.paragraph("**Tasks by section:**");
+    Object.entries(sectionTasks).forEach(([section, count]) => {
+      dv.paragraph(`• **${section}:** ${count} tasks`);
+    });
+  }
   
-  // Time-based analysis (if timestamps present)
+  // Time References
   const timeReferences = collection.blocks.filter(block => 
     /\d{2}:\d{2}/.test(block.content)
   );
-  console.log("Time references found:", timeReferences.length);
+  dv.paragraph(`✅ **Time references found:** ${timeReferences.length}`);
   
-  console.log("\n✅ Real-world scenario test completed!");
-  console.log("This daily note structure demonstrates complex hierarchy with practical content.");
+  // Test Validation
+  dv.header(3, "✅ Test Validation");
+  let allTestsPassed = true;
+  let testResults = [];
+  
+  // Test 1: Should parse many blocks (realistic daily note)
+  if (collection.blocks.length >= 40) {
+    testResults.push("✅ **Complex parsing:** Large number of blocks parsed successfully");
+  } else {
+    testResults.push("❌ **Complex parsing:** Fewer blocks than expected for complex content");
+    allTestsPassed = false;
+  }
+  
+  // Test 2: Should have deep hierarchy
+  if (maxDepth >= 6) {
+    testResults.push("✅ **Deep nesting:** Complex hierarchy structure preserved");
+  } else {
+    testResults.push("❌ **Deep nesting:** Hierarchy depth insufficient");
+    allTestsPassed = false;
+  }
+  
+  // Test 3: Should find activity mentions
+  if (activityMentions.length >= 10) {
+    testResults.push("✅ **Activity tracking:** Multiple activity references found");
+  } else {
+    testResults.push("❌ **Activity tracking:** Too few activity references");
+    allTestsPassed = false;
+  }
+  
+  // Test 4: Should have mixed content types
+  if (Object.keys(stats.types).length >= 5) {
+    testResults.push("✅ **Content variety:** Multiple content types recognized");
+  } else {
+    testResults.push("❌ **Content variety:** Insufficient content type diversity");
+    allTestsPassed = false;
+  }
+  
+  // Test 5: Should calculate productivity metrics
+  if (totalTasks > 0 && Object.keys(sectionTasks).length > 0) {
+    testResults.push("✅ **Productivity metrics:** Task analysis working correctly");
+  } else {
+    testResults.push("❌ **Productivity metrics:** Unable to calculate task metrics");
+    allTestsPassed = false;
+  }
+  
+  testResults.forEach(result => dv.paragraph(result));
+  
+  if (allTestsPassed) {
+    dv.paragraph("🎉 **ALL TESTS PASSED!** Real-world scenario handling is working perfectly.");
+    dv.paragraph("The Block system successfully handles complex daily notes with deep nesting, multiple content types, and realistic productivity tracking.");
+  } else {
+    dv.paragraph("⚠️ **SOME TESTS FAILED.** Check the results above for details.");
+  }
   
 } catch (error) {
   console.error("❌ Real-world scenario test failed:", error);

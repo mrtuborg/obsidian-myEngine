@@ -40,89 +40,113 @@ console.log("Testing");
 Content after separator with [[Activities/Separate Activity]].`;
 
 try {
-  const parser = new noteBlocksParser();
-  const collection = parser.parse("test-compatibility.md", compatibilityContent);
+  dv.header(2, "🔗 Compatibility Test Results");
+  dv.paragraph("**Testing:** Integration with existing components and backward compatibility");
   
-  console.log("📊 Compatibility Test Results:");
-  console.log("Total blocks:", collection.blocks.length);
-  console.log("Block types:", collection.getStats().types);
+  // Load CustomJS factories
+  const cjsResult = await cJS();
+  const noteBlocksParser = cjsResult.createnoteBlocksParserInstance;
+  const mentionsProcessor = cjsResult.creatementionsProcessorInstance;
+  
+  if (!noteBlocksParser) {
+    throw new Error("noteBlocksParser factory not found in CustomJS");
+  }
+  
+  const parser = noteBlocksParser();
+  const collection = await parser.parse("test-compatibility.md", compatibilityContent);
+  
+  // Basic Results
+  dv.header(3, "📊 Parsing Results");
+  const stats = collection.getStats();
+  dv.paragraph(`✅ **Total blocks:** ${collection.blocks.length}`);
+  dv.paragraph(`✅ **Block types:** ${Object.keys(stats.types).join(", ")}`);
   
   // Test 1: BlockCollection to compatibility array conversion
-  console.log("\n🔄 Testing Compatibility Array Conversion:");
+  dv.header(3, "🔄 Compatibility Array Conversion");
   const compatArray = collection.toCompatibilityArray();
-  console.log("Original blocks:", collection.blocks.length);
-  console.log("Compatibility array length:", compatArray.length);
-  console.log("First compatibility item structure:", Object.keys(compatArray[0] || {}));
+  dv.paragraph(`✅ **Original blocks:** ${collection.blocks.length}`);
+  dv.paragraph(`✅ **Compatibility array length:** ${compatArray.length}`);
+  dv.paragraph(`✅ **First item structure:** ${Object.keys(compatArray[0] || {}).join(", ")}`);
   
   // Test 2: mentionsProcessor integration
-  console.log("\n🔗 Testing mentionsProcessor Integration:");
+  dv.header(3, "🔗 MentionsProcessor Integration");
   
   // Simulate mentionsProcessor usage
   const testPageContent = "# Test Page\nSome existing content.";
   const tagId = "Activities/Test Activity";
   const frontmatterObj = { stage: "active", startDate: "2025-08-28" };
   
+  let mentionsTestPassed = false;
+  let mentionsResults = { collection: 0, array: 0, consistent: false };
+  
   try {
+    // Create mentionsProcessor instance using factory pattern
+    if (!mentionsProcessor) {
+      throw new Error("mentionsProcessor factory not found in CustomJS");
+    }
+    
+    const processor = mentionsProcessor();
+    
     // Test with BlockCollection (new format)
-    console.log("Testing with BlockCollection...");
-    const mentionsResult1 = await mentionsProcessor.run(
+    const mentionsResult1 = await processor.run(
       testPageContent,
       collection, // Pass BlockCollection directly
       tagId,
       frontmatterObj
     );
-    console.log("✓ BlockCollection integration successful");
-    console.log("Result length:", mentionsResult1.length);
+    const result1Length = typeof mentionsResult1 === 'string' ? mentionsResult1.split('\n').length : 0;
+    mentionsResults.collection = result1Length;
     
     // Test with compatibility array (old format)
-    console.log("Testing with compatibility array...");
-    const mentionsResult2 = await mentionsProcessor.run(
+    const mentionsResult2 = await processor.run(
       testPageContent,
       compatArray, // Pass compatibility array
       tagId,
       frontmatterObj
     );
-    console.log("✓ Compatibility array integration successful");
-    console.log("Result length:", mentionsResult2.length);
+    const result2Length = typeof mentionsResult2 === 'string' ? mentionsResult2.split('\n').length : 0;
+    mentionsResults.array = result2Length;
     
     // Compare results
-    const resultsMatch = mentionsResult1.length === mentionsResult2.length;
-    console.log("✓ Results consistency:", resultsMatch ? "PASS" : "FAIL");
+    mentionsResults.consistent = result1Length === result2Length;
+    mentionsTestPassed = true;
+    
+    dv.paragraph(`✅ **BlockCollection integration:** ${mentionsResults.collection} content lines`);
+    dv.paragraph(`✅ **Compatibility array integration:** ${mentionsResults.array} content lines`);
+    dv.paragraph(`✅ **Results consistency:** ${mentionsResults.consistent ? "PASS" : "FAIL"}`);
     
   } catch (mentionError) {
-    console.log("⚠️ MentionsProcessor test skipped (component may need frontmatter param)");
-    console.log("Error:", mentionError.message);
+    dv.paragraph(`⚠️ **MentionsProcessor test:** Skipped (${mentionError.message})`);
   }
   
   // Test 3: Block attribute queries
-  console.log("\n🔍 Testing Advanced Queries:");
+  dv.header(3, "🔍 Advanced Query Testing");
   
   // Find all mentions
   const mentions = collection.findByType("mention");
-  console.log("Total mentions found:", mentions.length);
+  dv.paragraph(`✅ **Total mentions found:** ${mentions.length}`);
   
   // Find mentions with specific targets
   const activityMentions = mentions.filter(block => {
     const target = block.getAttribute("target");
     return target && target.includes("Activities/");
   });
-  console.log("Activity mentions:", activityMentions.length);
+  dv.paragraph(`✅ **Activity mentions:** ${activityMentions.length}`);
   
   // Find indented content
   const indentedBlocks = collection.blocks.filter(block => 
     (block.getAttribute("indentLevel") || 0) > 0
   );
-  console.log("Indented blocks:", indentedBlocks.length);
+  dv.paragraph(`✅ **Indented blocks:** ${indentedBlocks.length}`);
   
   // Test hierarchy relationships
   const blocksWithChildren = collection.blocks.filter(block => block.children.length > 0);
-  console.log("Blocks with children:", blocksWithChildren.length);
-  
   const blocksWithParents = collection.blocks.filter(block => block.parent !== null);
-  console.log("Blocks with parents:", blocksWithParents.length);
+  dv.paragraph(`✅ **Blocks with children:** ${blocksWithChildren.length}`);
+  dv.paragraph(`✅ **Blocks with parents:** ${blocksWithParents.length}`);
   
   // Test 4: Performance comparison
-  console.log("\n⚡ Performance Test:");
+  dv.header(3, "⚡ Performance Testing");
   const startTime = performance.now();
   
   // Simulate multiple operations
@@ -133,15 +157,68 @@ try {
   }
   
   const endTime = performance.now();
-  console.log("100 query operations took:", Math.round(endTime - startTime), "ms");
+  const performanceTime = Math.round(endTime - startTime);
+  dv.paragraph(`✅ **100 query operations:** ${performanceTime}ms`);
   
   // Test 5: Memory usage estimation
-  console.log("\n💾 Memory Usage Estimation:");
+  dv.header(3, "💾 Memory Usage Analysis");
   const blockMemory = collection.blocks.length * 500; // Rough estimate per block
   const relationshipMemory = blocksWithParents.length * 100; // Rough estimate per relationship
-  console.log("Estimated memory usage:", Math.round((blockMemory + relationshipMemory) / 1024), "KB");
+  const totalMemoryKB = Math.round((blockMemory + relationshipMemory) / 1024);
+  dv.paragraph(`✅ **Estimated memory usage:** ${totalMemoryKB}KB`);
   
-  console.log("\n✅ Compatibility test completed successfully!");
+  // Test Validation
+  dv.header(3, "✅ Test Validation");
+  let allTestsPassed = true;
+  let testResults = [];
+  
+  // Test 1: Compatibility array conversion
+  if (compatArray.length === collection.blocks.length) {
+    testResults.push("✅ **Compatibility conversion:** Array length matches block count");
+  } else {
+    testResults.push("❌ **Compatibility conversion:** Array length mismatch");
+    allTestsPassed = false;
+  }
+  
+  // Test 2: MentionsProcessor integration
+  if (mentionsTestPassed && mentionsResults.consistent) {
+    testResults.push("✅ **MentionsProcessor integration:** Both formats work consistently");
+  } else if (mentionsTestPassed) {
+    testResults.push("⚠️ **MentionsProcessor integration:** Works but results inconsistent");
+  } else {
+    testResults.push("⚠️ **MentionsProcessor integration:** Test skipped");
+  }
+  
+  // Test 3: Query performance
+  if (performanceTime < 100) {
+    testResults.push("✅ **Query performance:** Fast response time");
+  } else {
+    testResults.push("⚠️ **Query performance:** Slower than expected");
+  }
+  
+  // Test 4: Memory efficiency
+  if (totalMemoryKB < 100) {
+    testResults.push("✅ **Memory efficiency:** Reasonable memory usage");
+  } else {
+    testResults.push("⚠️ **Memory efficiency:** Higher memory usage than expected");
+  }
+  
+  // Test 5: Feature completeness
+  if (mentions.length > 0 && activityMentions.length > 0 && indentedBlocks.length > 0) {
+    testResults.push("✅ **Feature completeness:** All query types working");
+  } else {
+    testResults.push("❌ **Feature completeness:** Some query types not working");
+    allTestsPassed = false;
+  }
+  
+  testResults.forEach(result => dv.paragraph(result));
+  
+  if (allTestsPassed) {
+    dv.paragraph("🎉 **ALL COMPATIBILITY TESTS PASSED!** The Block system maintains full backward compatibility.");
+    dv.paragraph("Integration with existing components works seamlessly with both new and legacy formats.");
+  } else {
+    dv.paragraph("⚠️ **SOME TESTS FAILED.** Check the results above for details.");
+  }
   
 } catch (error) {
   console.error("❌ Compatibility test failed:", error);

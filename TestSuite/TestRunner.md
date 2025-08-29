@@ -5,18 +5,11 @@ This is the main test runner for the Obsidian Custom Scripts test suite. Run thi
 ## 🎯 Test Runner Interface
 
 ```dataviewjs
-/**
- * Main Test Suite Runner
- * Executes all tests or specific categories
- */
-
-// Simple test runner function
-async function runPKMTests() {
+try {
   console.log("🚀 PKM Test Suite Runner");
   console.log("=".repeat(50));
   console.log(`📅 Started: ${new Date().toISOString()}`);
-  console.log("");
-
+  
   const results = {
     total: 0,
     passed: 0,
@@ -98,68 +91,20 @@ async function runPKMTests() {
 
   if (results.failed === 0) {
     console.log("\n🎉 ALL TESTS PASSED! 🎉");
+    dv.paragraph("✅ **All tests passed!** Check console (F12) for details.");
   } else {
     console.log(`\n⚠️  ${results.failed} test(s) failed. Please review.`);
+    dv.paragraph(`❌ **${results.failed} test(s) failed.** Check console (F12) for details.`);
   }
 
   console.log("\n" + "=".repeat(50));
   
-  return results;
+  dv.paragraph(`📊 **Test Results:** ${results.passed}/${results.total} passed (${passRate}%)`);
+  
+} catch (error) {
+  console.error("Test runner error:", error);
+  dv.paragraph(`❌ **Test Runner Error:** ${error.message}`);
 }
-
-// Run specific tests function
-async function runSpecificTests(testNames) {
-  console.log("🎯 Running Specific Tests");
-  console.log("=".repeat(30));
-  
-  const results = { total: 0, passed: 0, failed: 0, errors: [] };
-  
-  for (const testName of testNames) {
-    console.log(`🧪 Running ${testName}...`);
-    
-    try {
-      // Simulate test
-      const duration = Math.random() * 100 + 50;
-      await new Promise(resolve => setTimeout(resolve, 10));
-      
-      const shouldPass = Math.random() > 0.1;
-      
-      if (shouldPass) {
-        console.log(`✅ ${testName}: PASSED (${Math.round(duration)}ms)`);
-        results.passed++;
-      } else {
-        console.log(`❌ ${testName}: FAILED - Simulated failure`);
-        results.failed++;
-        results.errors.push(`${testName}: Simulated failure`);
-      }
-      
-      results.total++;
-      
-    } catch (error) {
-      console.log(`💥 ${testName}: ERROR - ${error.message}`);
-      results.failed++;
-      results.errors.push(`${testName}: ${error.message}`);
-      results.total++;
-    }
-  }
-  
-  // Print summary
-  const passRate = results.total > 0 ? ((results.passed / results.total) * 100).toFixed(1) : 0;
-  console.log(`\n📊 Results: ${results.passed}/${results.total} passed (${passRate}%)`);
-  
-  return results;
-}
-
-// Test execution - uncomment the one you want to run:
-
-// 🚀 Run all tests
-runPKMTests();
-
-// 🎯 Run specific tests (uncomment and modify as needed)
-// runSpecificTests(["test-noteBlocksParser", "test-todoRollover"]);
-
-// 🧪 Run single test (uncomment and modify as needed)
-// runSpecificTests(["test-noteBlocksParser"]);
 ```
 
 ## 🎮 How to Use
