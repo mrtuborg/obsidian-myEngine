@@ -23,6 +23,7 @@ LM_context/
 ├── README.md                          # This file - project overview
 ├── static/                            # Tier 1: Static Foundation
 │   ├── environment.md                 # Hardware, network, software setup
+│   ├── obsidian-javascript-patterns.md # JavaScript & CustomJS patterns reference
 │   ├── knowledge-base/                # Compiled knowledge
 │   └── resources/                     # PDF documents and static resources
 ├── evolving/                          # Tier 2: Evolving Product
